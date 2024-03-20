@@ -29,14 +29,16 @@ newTalent{
 	--Knight with shield --image = "npc/Shieldpaladin.png"
 	--Soldier with Sword --image = "npc/flamedead.png"
 	--Wizard with Fireball --image = "npc/Flamelich.png"
+
 	--Many times things that are apparent to us are not obvious to others. When making ANY note. Write the following things:
 	--1) What's the name of the talent this note is in regards to/what is it affecting? If it's not a talent, then what is it?
 	--2) Is the talent a class talent or generic talent?
-	--Permanent Companion (Is this a talent, something similar to the worm that walks?)
-	--Can equip items based on talent level (What is this governed by? A talent? Something innate to the class?)
-	--Re-use skill to resurrect (What skill?)
-	--Is Undead (Is this a tag or attribute? Or is it gained by a talent)
-	--First talent include no dmg to allies for pet and player (No damage to who exactly? No damage to the pet and player? Or no damage to "allies")
+	
+	--Permanent Companion 
+	--Can equip items based on talent level 
+	--Re-use skill to resurrect 
+	--Is Undead 
+	--First talent include no dmg to allies for pet and player
 	--See Worm that walks talent tree for reference
 
 	--Note: Playing TOME again for a little bit is the quickest way to become familiar with this. I plan on doing so.
