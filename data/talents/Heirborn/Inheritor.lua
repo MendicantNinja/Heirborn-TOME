@@ -1,6 +1,9 @@
+
 local ActorTalents = require "engine.interface.ActorTalents"
 damDesc = ActorTalents.main_env.damDesc
 newTalentType{ type="Heirborn/Inheritor", name = _t("Inheritor", "talent type"), description = _t"The various racial bonuses a Shadowmeld can have." }
+newTalentType{ no_silence=true, is_spell=true, type="Heirborn/other", name = _t("other", "talent type"), hide = true, description = _t"Talents of the various entities of the world." }
+
 local techs_req1 = function(self, t) local stat = "str"; return {
 	stat = { [stat]=function(level) return 12 + (level-1) * 2 end },
 	level = function(level) return 0 + (level-1)  end,
@@ -32,24 +35,20 @@ end
 
 --Make the guardian.
 local function makeGuardian(self)
-	self:attr("summoned_times",11)
+	self:attr("summoned_times", 11)
 	local g = require("mod.class.NPC").new{
 		--Anything that doesn't fall into the below categories goes here.
-		type = "Undead", subtype = "skeleton",
-		name = "guardian",
+		type = "Undead", subtype = "Skeleton",
+		name = "Guardian",
 		desc = _t[[A skeletal knight carrying a large shield and wearing plate mail.]],
-		display = 'h', image = "npc/Shieldpaladin.png",
+	    image = "npc/flamedead.png",
+		--display = "G",
+		--color=colors.SANDY_BROWN,
 		is_guardian = 1,
 
 		difficulty_boosted = 1,  -- Avoid difficulty boosting, adding to party probably also works but I'm positive this always does
 		save_hotkeys = true,
 		never_anger = true,
-
-		moddable_tile = "orc_male",
-		moddable_tile_nude = 1,
-		moddable_tile_base = "worm_that_walks_base.png",
-
-
 
 		--Anything to do with stats that are not resistances and affinities goes here. 
 		level_range = {1, self.max_level}, exp_worth=0,
@@ -97,7 +96,7 @@ local function makeGuardian(self)
 		--Equip this with your custom imperial items. see base_list parameter on the 3rd item
 		resolvers.equip{ id=true,
 			{type="weapon", subtype="longsword", ego_chance = -1000, id=true, forbid_power_source={antimagic=true}, autoreq=true, not_properties = {"unique"}},
-			{type="weapon", subtype="shield", ego_chance = -1000, id=true, forbid_power_source={antimagic=true}, autoreq=true, not_properties = {"unique"}},
+			{type="shield", subtype="shield", ego_chance = -1000, id=true, forbid_power_source={antimagic=true}, autoreq=true, not_properties = {"unique"}},
 			{type="armor", subtype="steel", name="Imperial Armor", base_list="mod.class.Object:/data-cults/general/objects/special-misc.lua", ego_chance = -1000, id=true, autoreq=true}
 		},
 		
@@ -112,6 +111,7 @@ local function makeGuardian(self)
 			["corruption/scourge"] = true,
 			["technique/combat-training"] = true,
 		},
+
 		--What talents does the Guardian start with points already invested into?
 		resolvers.talents{
 			[Talents.T_ARMOUR_TRAINING]=1,
@@ -173,14 +173,43 @@ local function makeGuardian(self)
 		no_auto_resists = true,
 		open_door = true,
 		can_change_level = true,
-	}
-
+    }
+	
 	return g
 end
 
 newTalent{
-	name = "Guardian Connection", image = "talents/blackguard5.png",
-	type = {"corruption/other", 1},
+	name = "Self-destruction", short_name = "GUARDIAN_DESTRUCT", image = "talents/golem_destruct.png",
+	type = {"Heirborn/other", 1},
+	points = 1,
+	range = 0,
+	radius = 4,
+	no_unlearn_last = true,
+	target = function(self, t)
+		return {type="ball", range=self:getTalentRange(t), selffire=false, radius=self:getTalentRadius(t)}
+	end,
+	no_npc_use = true,
+	on_pre_use = function(self, t)
+		return self.summoner and self.summoner.dead
+	end,
+	action = function(self, t)
+		local tg = self:getTalentTarget(t)
+		self:project(tg, self.x, self.y, DamageType.FIRE, 50 + 10 * self.level)
+		game.level.map:particleEmitter(self.x, self.y, tg.radius, "ball_fire", {radius=tg.radius})
+		game:playSoundNear(self, "talents/fireflash")
+		self:die(self)
+		return true
+	end,
+	info = function(self, t)
+		local rad = self:getTalentRadius(t)
+		return ([[Self destruct in a glorious explosion of fire dealing %0.2f fire damage to all enemies in %d radius.  Your summoner must be dead to use this talent.]])
+			:tformat(damDesc(self, DamageType.FIRE, 50 + 10 * self.level), rad)
+	end,
+}
+
+newTalent{
+	name = "Guardian Connection", shortname = "GUARDIAN_CONNECTION", image = "talents/blackguard5.png",
+	type = {"corruption/other", 2},
 	require = techs_req1,
 	points = 1,
 	cooldown = 25,
@@ -191,7 +220,7 @@ newTalent{
 	tactical = { BUFF=100 },
 	activate = function(self, t) return {} end,
 	deactivate = function(self, t, p) return true end,
-	info = function(self, t) return (_t[[Connection to your Guardian]]) end,
+	info = function(self, t) return (_t[[Connection to your Guardian.]]) end,
 	--Knight with shield --image = "npc/Shieldpaladin.png"
 	--Soldier with Sword --image = "npc/flamedead.png"
 	--Wizard with Fireball --image = "npc/Flamelich.png"
@@ -205,8 +234,8 @@ newTalent{
 }
 
 newTalent{
-	name = "Ancestral Guardian",
-	type = {"Heirborn/inheritor", 1},
+	name = "Ancestral Guardian", image = "talents/blackguard5.png",
+	type = {"Heirborn/Inheritor", 1},
 	require = techs_req1,
 	points = 5,
 	cooldown = 15,
@@ -221,7 +250,7 @@ newTalent{
 			if game.party:hasMember(self) and game.party:hasMember(self.guardian) then game.party:removeMember(self.guardian) end
 			self.guardian:disappear()
 			self.guardian = nil
-			self.initialized_guardian= nil --initialized_guardian is a bool (flag) that checks if the guardian is present.
+			self.initialized_guardian = nil --initialized_guardian is a bool (flag) that checks if the guardian is present.
 		end
 	end,
 	on_levelup_close = function(self, t)
@@ -267,10 +296,9 @@ newTalent{
 		end
 		if not self.guardian then return end
 		self.guardian.faction = self.faction
-		self.guardian.name = ("Ancestral guardian of %s"):tformat(self:getName())
+		self.guardian.name = ("Ancestral Guardian of %s"):tformat(self:getName())
 		self.guardian.summoner = self
 		self.guardian.summoner_gain_exp = true
-
 		-- Find space
 		local x, y = util.findFreeGrid(self.x, self.y, 5, true, {[Map.ACTOR]=true})
 		if not x then
@@ -449,10 +477,10 @@ newTalent{
 		end	
 	end,
 	info = function(self, t)
-		return ([[You summon the ancestral guardian associated with your noble imperial lineage
+		return ([[You summon the ancestral guardian associated with your imperial lineage.
 		You can fully control, level, and equip it.
 		Using this spell will ressurect your friendly guardian if it died, giving it back %d%% life.
-		Higher raw talent levels will give your horror more equipment slots:
+		Higher raw talent levels will give your guardian more equipment slots:
 
 		Level 1:  Mainhand, Offhand
 		Level 2:  Body
@@ -481,12 +509,12 @@ newTalent{
 	--Use again (only once) while active to teleport back to your banner.
 	--Cool down 15, lasts 15 turns (15 turn duration + 15 turn cool down = 30 turns between uses) 
 	--Start cooldown after duration expires
-		info = function(self, t)
-		return ([[Summon a banner within %d tiles to reduce incoming damage for a duration. Gives allies within %d tiles a %d% max life increase. You can use this ability once
+	info = function(self, t)
+		return ([[Summon a banner within seven tiles to reduce incoming damage for a duration. Gives allies within 7 tiles a max life increase of ten percent. You can use this ability once
 		while active to teleport back to your banner.]])
-		:tformat(7, 7, 10)
-		end,
-	}
+	end,
+
+}
 
 newTalent{
 	name = "Heartfire", short_name = "GROUPHEALBURN", image = "talents/blackguard10.png",
@@ -495,20 +523,18 @@ newTalent{
 	points = 5,
 	cooldown = 25,
 	mode = "activated",
-	action = function(self, t)
-		game:playSoundNear(self, "talents/heal")
-		self:heal(self.max_life, self)
-
-
-	end,
-	--Healing skill
+	--action = function(self, t)
+	--game:playSoundNear(self, "talents/heal")
+	--self:heal(self.max_life, self)
+	--end,
+	--Healing skill 
 	--Heal player and Minion to 100% health
 	--both player and minion take 10% total health per turn as fire damage over time (6turns)
 	--Apply taunt to minion for 6 turns.
-	--Apply fire retaliation damage to player and minion for 6 turns, scaling on player's con.
-		info = function(self, t)
-		return ([[Placeholder]])
-		end,
+	--Apply fire retaliation damage to player and minion for 6 turns, scaling on player's con. 
+	info = function(self, t)
+        return ([[The fire within burns brighter than the fire outside. Heal to full health, but take one-tenth total health per turn as fire damage over time for six turns.]])
+    end,
 }
 
 newTalent{

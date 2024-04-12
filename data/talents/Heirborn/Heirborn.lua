@@ -1,4 +1,8 @@
 
+
+
+
+
 -- Generic requires for techs based on talent level
 -- Uses STR
 techs_req1 = function(self, t) local stat = "str"; return {
@@ -43,5 +47,7 @@ techs_cun_req5 = {
 	stat = { cun=function(level) return 44 + (level-1) * 2 end },
 	level = function(level) return 16 + (level-1)  end,
 }
+
 local ActorTalents = require "engine.interface.ActorTalents" 
 damDesc = Talents.main_env.damDesc
+
